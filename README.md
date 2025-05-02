@@ -69,25 +69,25 @@ This project is a **Generative AI-powered document analysis tool** designed to a
 
 ## ⚙️ Setup Instructions
 
-### 1. Clone the Repository
+1. Clone the Repository
 
 ```bash
 git clone https://github.com/your-username/med-policy-insight-ai.git
 cd med-policy-insight-ai
 ```
-### 2. Create a Virtual Environment (Optional)
+2. Create a Virtual Environment (Optional)
 
 ```bash
 python3 -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 ```
-### 3. Install Dependencies
+3. Install Dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 4. Add Environment Variables
+4. Add Environment Variables
 
 - Create a .env file in the root directory:
 ```
