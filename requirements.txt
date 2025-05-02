@@ -1,0 +1,6 @@
+streamlit
+boto3
+openai
+PyPDF2
+retrying
+python-dotenv
