@@ -1,4 +1,3 @@
-# GenAI-Medical-Policy-Analysis
 # 🧠 AI-Powered Medical Policy Analyzer
 
 This project is a **Generative AI-powered document analysis tool** designed to automate the extraction of critical insights from medical policy documents. Developed for healthcare payer organizations, the system enables users to upload policy PDFs and ask natural language questions to receive intelligent, contextual answers.
