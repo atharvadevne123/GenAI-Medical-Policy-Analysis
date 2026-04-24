@@ -9,22 +9,24 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
-      packages: write
+      contents: write
     steps:
       - uses: actions/checkout@v4
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+
       - name: Install build tools
-        run: pip install build twine
+        run: pip install build
+
       - name: Build package
         run: python -m build
-      - name: Publish to GitHub Packages
+
+      - name: Upload distributions to latest release
         run: |
-          twine upload \
-            --repository-url https://pypi.pkg.github.com/atharvadevne123/ \
-            --username __token__ \
-            --password ${{ secrets.GITHUB_TOKEN }} \
-            dist/*
+          TAG=$(gh release list --limit 1 --json tagName --jq '.[0].tagName')
+          gh release upload "$TAG" dist/* --clobber
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
