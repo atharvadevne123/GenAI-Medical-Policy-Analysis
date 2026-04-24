@@ -1,117 +1,107 @@
-# 🧠 AI-Powered Medical Policy Analyzer
+# GenAI Medical Policy Analyzer
 
-This project is a **Generative AI-powered document analysis tool** designed to automate the extraction of critical insights from medical policy documents. Developed for healthcare payer organizations, the system enables users to upload policy PDFs and ask natural language questions to receive intelligent, contextual answers.
-
----
-
-## 🚀 Key Features
-
-- 📄 Upload and analyze multiple medical policy documents (PDF format)
-- 🔍 Automatically extract 18 predefined critical data elements
-- 🤖 Conversational Q&A powered by **OpenAI GPT models**
-- 🧠 Vector-based retrieval using **LangChain**
-- ☁️ Cloud-ready (built with AWS integration)
-- 🖥️ User-friendly interface built with **Streamlit**
+AI-powered tool that extracts and compares critical data fields from medical insurance policy PDFs across multiple insurers using OpenAI GPT-4o-mini.
 
 ---
 
-## 🏗️ Tech Stack
+## UI/UX Transition: Streamlit → Google Stitch
 
-| Layer       | Technology                      |
-|------------|----------------------------------|
-| Frontend    | Streamlit                        |
-| Backend     | Python, LangChain         |
-| AI Engine   | OpenAI (GPT-3.5 / GPT-4 APIs)    |
-| PDF Parsing | PyPDF2                           |
-| Cloud       | AWS (EC2/S3), Python-dotenv      |
-| Database    | MongoDB, Neo4j (evaluated)       |
+The UI was redesigned using **Google Stitch** — replacing the original Streamlit interface with a professional healthcare SaaS dashboard built in HTML/Tailwind CSS, served by a Flask backend.
+
+### Before — Streamlit UI
+![Streamlit UI](ui/screenshots/streamlit_before.png)
+
+### After — Google Stitch UI
+![Stitch Dashboard](ui/screenshots/stitch_live_dashboard.png)
+
+![Stitch Results](ui/screenshots/stitch_live_results.png)
+
+**What changed:**
+- Static Streamlit components → Stitch-generated Tailwind CSS + Material Symbols design system
+- Streamlit server → Flask REST API (`/api/analyze`, `/api/demo`)
+- Custom healthcare color scheme (`#1A237E` navy, `#1565c0` blue)
+- Interactive policy comparison table rendered from markdown
+- Real-time demo mode toggle with instant results
+- Drag-and-drop PDF upload with file count indicator
 
 ---
 
-## 📁 Project Structure
+## Features
+
+- Upload multiple medical policy PDFs (local drag-and-drop or AWS S3)
+- Automatically extract 18 standardized fields per policy
+- Side-by-side comparison table across insurers (Aetna, UnitedHealth, Cigna, etc.)
+- Demo Mode — no credentials required to explore the UI
+- OpenAI GPT-4o-mini for intelligent policy text analysis
+- Flask REST API with endpoints: `GET /`, `POST /api/analyze`, `POST /api/demo`
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| UI / Design | Google Stitch + HTML/Tailwind CSS |
+| UI Framework (legacy) | Streamlit (`main_streamlit.py`) |
+| Backend | Python / Flask |
+| AI Engine | OpenAI GPT-4o-mini |
+| PDF Parsing | PyPDF2 |
+| Cloud Storage | AWS S3 / boto3 |
+| Config | python-dotenv |
+
+---
+
+## Project Structure
+
 ```
-─ main.py                 # Streamlit entry point
-─ app.py                  # Alternative or legacy Streamlit app
-─ langchain_helper.py     # Core logic for PDF analysis and Q&A
-─ langchain_helper1.py    # Backup/experimental version
-─ readfile.py             # PDF text extraction
-─ readfile2.py            # Variant PDF reader
-─ requirements.txt        # Python dependencies
-─ .env                    # OpenAI and AWS credentials (not included)
+├── server.py              # Flask server (primary entry point)
+├── main_streamlit.py      # Legacy Streamlit UI (archived)
+├── langchain_helper1.py   # PDF extraction + OpenAI analysis backend
+├── app.py                 # Alternative S3-only analyzer
+├── readfile.py / readfile2.py  # PDF reader utilities
+├── requirements.txt
+├── .env.example
+├── ui/
+│   ├── index.html         # Stitch-generated dashboard (primary UI)
+│   ├── results.html       # Stitch-generated results screen
+│   └── screenshots/
+│       ├── streamlit_before.png      # Before: Streamlit UI
+│       ├── stitch_live_dashboard.png # After: Stitch dashboard
+│       └── stitch_live_results.png   # After: Stitch results
 ```
----
-
-## 🚀 Features
-
-- Upload and analyze medical policy documents (PDF format)
-- Extract 18 predefined critical data elements
-- Ask natural language questions about the policy content
-- Uses OpenAI GPT, LangChain for intelligent response
-- Runs on Streamlit with a user-friendly UI
-- Ready for cloud deployment (e.g., AWS)
 
 ---
 
-## 🛠️ Tech Stack
-
-| Component    | Technology         |
-|--------------|--------------------|
-| Interface    | Streamlit           |
-| Backend      | Python              |
-| AI Model     | OpenAI GPT-3.5/4    |
-| Embedding    | LangChain / OpenAI  |
-| PDF Parser   | PyPDF2              |
-| Deployment   | AWS (EC2/S3)        |
-| Database     | MongoDB, Neo4j (evaluated) |
-
----
-
-## ⚙️ Setup Instructions
-
-1. Clone the Repository
+## Setup
 
 ```bash
-git clone https://github.com/your-username/med-policy-insight-ai.git
-cd med-policy-insight-ai
-```
-2. Create a Virtual Environment (Optional)
-
-```bash
-python3 -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-```
-3. Install Dependencies
-
-```bash
+git clone https://github.com/atharvadevne123/GenAI-Medical-Policy-Analysis
+cd GenAI-Medical-Policy-Analysis
+python3 -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
+cp .env.example .env
+# Fill in OPENAI_API_KEY and AWS credentials in .env
 ```
 
-4. Add Environment Variables
+### Run the app
 
-- Create a .env file in the root directory:
+```bash
+python server.py
+# Open http://localhost:5000
 ```
-OPENAI_API_KEY=your_openai_key
-AWS_ACCESS_KEY_ID=your_aws_key
-AWS_SECRET_ACCESS_KEY=your_aws_secret
-```
-🔒 Do not upload .env, .pem, or Git tokens to public repositories.
+
+Use **Demo Mode** in the sidebar to explore without credentials.
 
 ---
 
-### 🧪 Run the Application
+## Extracted Fields
 
-```
-streamlit run main.py
-```
+Policy Number · Title · Policy Criteria · Age Criteria · Insurance Company · Insurance Type ·
+Service Type · Status · Effective Date · Last Review · Next Review · Guideline Source ·
+States Covered · Prior Authorization · Exclusions/Limitations · Coverage Period · Related Policies · Link to Policy
+
 ---
 
-### 👤 Author
+## Author
 
-
-**Atharva Devne**  
-
-
-
-
-
-
+**Atharva Devne**

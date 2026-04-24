@@ -1,0 +1,30 @@
+# Credentials and secrets
+.env
+*.pem
+*.key
+*token*.txt
+*token*.json
+*credentials*
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.eggs/
+venv/
+env/
+.venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Streamlit
+.streamlit/secrets.toml

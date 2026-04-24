@@ -1,6 +1,7 @@
-streamlit
-boto3
-openai
-PyPDF2
-retrying
-python-dotenv
+flask>=3.0.0
+openai>=1.30.0
+boto3>=1.34.0
+PyPDF2>=3.0.0
+python-dotenv>=1.0.0
+retrying>=1.3.4
+streamlit>=1.32.0
