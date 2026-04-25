@@ -1,3 +1,5 @@
+![Python Package](https://github.com/atharvadevne123/GenAI-Medical-Policy-Analysis/actions/workflows/python-publish.yml/badge.svg) ![Bump Version](https://github.com/atharvadevne123/GenAI-Medical-Policy-Analysis/actions/workflows/bump-version.yml/badge.svg)
+
 # GenAI Medical Policy Analyzer
 
 > AI-powered document intelligence for healthcare payer organizations — automatically extracts, structures, and compares critical data fields from medical insurance policy PDFs across multiple insurers using OpenAI GPT-4o-mini.
