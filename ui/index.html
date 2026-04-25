@@ -248,38 +248,56 @@
 </div>
 <!-- Results Area -->
 <div id="resultsArea" class="flex-1 min-h-[400px]">
-  <!-- Empty State (shown by default) -->
+
+  <!-- Empty State -->
   <div id="emptyState" class="h-full bg-surface-container-low rounded-xl flex items-center justify-center min-h-[400px]">
     <div class="max-w-md w-full text-center p-8">
       <div class="w-20 h-20 mx-auto bg-surface-container-lowest rounded-full flex items-center justify-center shadow-sm mb-6">
         <span class="material-symbols-outlined text-4xl text-secondary" style="font-variation-settings: 'FILL' 1;">local_hospital</span>
       </div>
       <h3 class="text-2xl font-bold text-on-surface mb-3 tracking-tight">Ready to Analyze</h3>
-      <p class="text-on-surface-variant text-sm leading-relaxed mb-8">Enter a medical condition and upload PDFs, or enable Demo Mode, then click Analyze Policy.</p>
+      <p class="text-on-surface-variant text-sm leading-relaxed">Enter a medical condition and upload PDFs, or enable Demo Mode, then click Analyze Policy.</p>
     </div>
   </div>
-  <!-- Loading State -->
-  <div id="loadingState" class="hidden h-full bg-surface-container-low rounded-xl flex items-center justify-center min-h-[400px]">
-    <div class="text-center">
-      <div class="inline-block w-12 h-12 border-4 border-secondary border-t-transparent rounded-full animate-spin mb-4"></div>
-      <p class="text-on-surface-variant font-medium">Running AI analysis…</p>
+
+  <!-- Loading / streaming state -->
+  <div id="loadingState" class="hidden bg-surface-container-low rounded-xl p-8 min-h-[400px] flex flex-col items-center justify-center gap-6">
+    <div class="inline-block w-12 h-12 border-4 border-secondary border-t-transparent rounded-full animate-spin"></div>
+    <div class="w-full max-w-sm">
+      <div class="flex justify-between text-xs text-on-surface-variant mb-1">
+        <span id="progressLabel">Preparing…</span>
+        <span id="progressFraction"></span>
+      </div>
+      <div class="w-full bg-surface-container-high rounded-full h-2">
+        <div id="progressBar" class="bg-secondary h-2 rounded-full transition-all duration-500" style="width:0%"></div>
+      </div>
     </div>
   </div>
+
   <!-- Error State -->
-  <div id="errorState" class="hidden bg-error-container border border-error/20 rounded-xl p-6 text-on-error-container">
+  <div id="errorState" class="hidden bg-error-container border border-error/20 rounded-xl p-6">
     <div class="flex items-center gap-3">
       <span class="material-symbols-outlined text-error">error</span>
-      <p id="errorMsg" class="font-medium text-sm"></p>
+      <p id="errorMsg" class="font-medium text-sm text-on-error-container"></p>
     </div>
   </div>
+
   <!-- Analysis Results -->
-  <div id="analysisResults" class="hidden space-y-6">
-    <!-- Success Banner -->
-    <div class="flex items-center gap-3 bg-green-50 border border-green-200 rounded-xl p-4">
-      <span class="material-symbols-outlined text-green-600">check_circle</span>
-      <p id="successMsg" class="text-green-800 font-semibold text-sm"></p>
+  <div id="analysisResults" class="hidden space-y-5">
+    <!-- Success banner + CSV button -->
+    <div class="flex items-center justify-between bg-green-50 border border-green-200 rounded-xl p-4 gap-4">
+      <div class="flex items-center gap-3">
+        <span class="material-symbols-outlined text-green-600">check_circle</span>
+        <p id="successMsg" class="text-green-800 font-semibold text-sm"></p>
+      </div>
+      <button id="csvBtn" onclick="downloadCSV()"
+        class="flex items-center gap-1.5 bg-white border border-green-300 text-green-700 hover:bg-green-50
+               text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors shrink-0">
+        <span class="material-symbols-outlined text-base">download</span>
+        Download CSV
+      </button>
     </div>
-    <!-- Metric Cards -->
+    <!-- Metric cards -->
     <div class="grid grid-cols-3 gap-4">
       <div class="bg-surface-container-lowest p-5 rounded-lg text-center">
         <p id="metricBatches" class="text-3xl font-bold text-secondary"></p>
@@ -294,19 +312,66 @@
         <p class="text-xs text-on-surface-variant mt-1 font-medium uppercase tracking-wider">Fields</p>
       </div>
     </div>
-    <!-- Analysis Table Container -->
-    <div id="analysisContainer" class="bg-surface-container-lowest rounded-xl p-6 shadow-sm border border-surface-container-high/30"></div>
+    <!-- Batch results appended here progressively -->
+    <div id="analysisContainer" class="space-y-4"></div>
   </div>
+
 </div>
 </div>
 </main>
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script>
+// ── State ────────────────────────────────────────────────────────────────────
 let demoMode = false;
+let collectedAnalyses = [];
+let currentCondition = '';
 
+// ── Helpers ──────────────────────────────────────────────────────────────────
+function showState(state) {
+  ['emptyState','loadingState','errorState','analysisResults'].forEach(id => {
+    document.getElementById(id).classList.add('hidden');
+  });
+  document.getElementById(state).classList.remove('hidden');
+}
+
+function styleTable(container) {
+  container.querySelectorAll('table').forEach(t => {
+    t.classList.add('w-full','text-sm','border-collapse');
+    t.querySelectorAll('th').forEach(th =>
+      th.classList.add('bg-primary-container','text-white','px-3','py-2','text-left','text-xs','font-semibold','uppercase','tracking-wide'));
+    t.querySelectorAll('td').forEach(td =>
+      td.classList.add('px-3','py-2','border-b','border-surface-container-high'));
+    t.querySelectorAll('tr:nth-child(even) td').forEach(td =>
+      td.classList.add('bg-surface-container-low'));
+  });
+}
+
+function appendBatch(analysis, index, total, condition) {
+  const container = document.getElementById('analysisContainer');
+  const el = document.createElement('details');
+  el.open = true;
+  el.className = 'bg-surface-container-lowest rounded-xl p-5 shadow-sm border border-surface-container-high/30';
+  el.innerHTML = `
+    <summary class="cursor-pointer font-semibold text-on-surface flex items-center gap-2 py-1 select-none list-none">
+      <span class="material-symbols-outlined text-secondary text-lg">summarize</span>
+      Policy Comparison — ${condition} (Batch ${index} of ${total})
+    </summary>
+    <div class="mt-4 overflow-x-auto">${marked.parse(analysis)}</div>`;
+  styleTable(el);
+  container.appendChild(el);
+}
+
+function setProgress(label, done, total) {
+  const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+  document.getElementById('progressLabel').textContent = label;
+  document.getElementById('progressFraction').textContent = total > 0 ? `${done} / ${total}` : '';
+  document.getElementById('progressBar').style.width = pct + '%';
+}
+
+// ── Demo toggle ───────────────────────────────────────────────────────────────
 function toggleDemo() {
   demoMode = !demoMode;
-  const btn = document.getElementById('demoToggle');
+  const btn   = document.getElementById('demoToggle');
   const thumb = document.getElementById('demoThumb');
   btn.setAttribute('aria-checked', demoMode);
   btn.style.backgroundColor = demoMode ? '#005db7' : '';
@@ -318,72 +383,125 @@ document.getElementById('pdfUpload').addEventListener('change', function() {
   document.getElementById('dropLabel').textContent = n > 0 ? `${n} file(s) selected` : 'Drag & drop file here';
 });
 
-function showState(state) {
-  ['emptyState','loadingState','errorState','analysisResults'].forEach(id => {
-    document.getElementById(id).classList.add('hidden');
-  });
-  document.getElementById(state).classList.remove('hidden');
-}
-
+// ── Main analysis ─────────────────────────────────────────────────────────────
 async function runAnalysis() {
   const condition = document.getElementById('conditionInput').value.trim();
-  if (!condition) {
-    alert('Please enter a medical condition first.');
-    return;
-  }
+  if (!condition) { alert('Please enter a medical condition first.'); return; }
 
-  showState('loadingState');
+  currentCondition = condition;
+  collectedAnalyses = [];
   document.getElementById('analyzeBtn').disabled = true;
+  document.getElementById('analysisContainer').innerHTML = '';
+  showState('loadingState');
+  setProgress('Preparing…', 0, 0);
 
   try {
-    let data;
     if (demoMode) {
-      const res = await fetch('/api/demo', {
+      setProgress('Loading demo data…', 0, 1);
+      const res  = await fetch('/api/demo', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({condition})
+        body: JSON.stringify({condition}),
       });
-      data = await res.json();
+      const data = await res.json();
+      collectedAnalyses = data.analyses;
+      data.analyses.forEach((a, i) => appendBatch(a, i + 1, data.batches, condition));
+      finishResults(data.batches, condition, true);
     } else {
-      const form = new FormData();
-      form.append('condition', condition);
-      const files = document.getElementById('pdfUpload').files;
-      for (const f of files) form.append('pdfs', f);
-      const res = await fetch('/api/analyze', {method: 'POST', body: form});
-      data = await res.json();
-      if (!res.ok) { throw new Error(data.error || 'Analysis failed'); }
+      await streamAnalysis(condition);
     }
-
-    document.getElementById('successMsg').textContent =
-      `Analysis Complete — ${data.batches} batch(es) processed${data.demo ? ' (Demo Mode)' : ''}`;
-    document.getElementById('metricBatches').textContent = data.batches;
-    document.getElementById('metricCondition').textContent = data.condition;
-
-    const container = document.getElementById('analysisContainer');
-    container.innerHTML = data.analyses.map((analysis, i) => `
-      <details open class="mb-4 last:mb-0">
-        <summary class="cursor-pointer font-semibold text-on-surface flex items-center gap-2 py-2 select-none">
-          <span class="material-symbols-outlined text-secondary">summarize</span>
-          Policy Comparison — ${data.condition} (Batch ${i+1})
-        </summary>
-        <div class="mt-4 overflow-x-auto prose prose-sm max-w-none">${marked.parse(analysis)}</div>
-      </details>
-    `).join('');
-
-    // Style the markdown table
-    container.querySelectorAll('table').forEach(t => {
-      t.classList.add('w-full','text-sm','border-collapse');
-      t.querySelectorAll('th').forEach(th => th.classList.add('bg-primary-container','text-white','px-3','py-2','text-left','text-xs','font-semibold','uppercase','tracking-wide'));
-      t.querySelectorAll('td').forEach(td => td.classList.add('px-3','py-2','border-b','border-surface-container-high'));
-      t.querySelectorAll('tr:nth-child(even) td').forEach(td => td.classList.add('bg-surface-container-low'));
-    });
-
-    showState('analysisResults');
   } catch (err) {
     document.getElementById('errorMsg').textContent = err.message;
     showState('errorState');
   } finally {
     document.getElementById('analyzeBtn').disabled = false;
+  }
+}
+
+async function streamAnalysis(condition) {
+  const form = new FormData();
+  form.append('condition', condition);
+  for (const f of document.getElementById('pdfUpload').files) form.append('pdfs', f);
+
+  const res = await fetch('/api/analyze', {method: 'POST', body: form});
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({error: 'Analysis failed'}));
+    throw new Error(err.error || 'Analysis failed');
+  }
+
+  const reader  = res.body.getReader();
+  const decoder = new TextDecoder();
+  let   buffer  = '';
+  let   total   = 0;
+
+  while (true) {
+    const {done, value} = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, {stream: true});
+    const lines = buffer.split('\n');
+    buffer = lines.pop();
+
+    for (const line of lines) {
+      if (!line.startsWith('data: ')) continue;
+      let evt;
+      try { evt = JSON.parse(line.slice(6)); } catch { continue; }
+
+      if (evt.type === 'meta') {
+        total = evt.total;
+        setProgress(`Analyzing batch 1 of ${total}…`, 0, total);
+        showState('loadingState');
+      } else if (evt.type === 'batch') {
+        collectedAnalyses.push(evt.analysis);
+        setProgress(`Analyzing batch ${evt.index} of ${evt.total}…`, evt.index, evt.total);
+        // Show results area and append batch progressively
+        document.getElementById('analysisResults').classList.remove('hidden');
+        document.getElementById('loadingState').classList.add('hidden');
+        document.getElementById('successMsg').textContent = `Analyzing… ${evt.index} of ${evt.total} batch(es)`;
+        document.getElementById('metricBatches').textContent = evt.total;
+        document.getElementById('metricCondition').textContent = condition;
+        appendBatch(evt.analysis, evt.index, evt.total, condition);
+      } else if (evt.type === 'error') {
+        console.warn(`Batch ${evt.index} error: ${evt.message}`);
+      } else if (evt.type === 'done') {
+        finishResults(evt.total, condition, false);
+      }
+    }
+  }
+}
+
+function finishResults(batches, condition, isDemo) {
+  document.getElementById('successMsg').textContent =
+    `Analysis Complete — ${batches} batch(es) processed${isDemo ? ' (Demo Mode)' : ''}`;
+  document.getElementById('metricBatches').textContent = batches;
+  document.getElementById('metricCondition').textContent = condition;
+  showState('analysisResults');
+}
+
+// ── CSV export ────────────────────────────────────────────────────────────────
+async function downloadCSV() {
+  if (!collectedAnalyses.length) return;
+  const btn = document.getElementById('csvBtn');
+  btn.disabled = true;
+  btn.textContent = 'Exporting…';
+  try {
+    const res = await fetch('/api/export-csv', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({analyses: collectedAnalyses, condition: currentCondition}),
+    });
+    if (!res.ok) throw new Error('Export failed');
+    const blob = await res.blob();
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = currentCondition.replace(/[^\w\-]/g, '_') + '.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<span class="material-symbols-outlined text-base">download</span> Download CSV';
   }
 }
 </script>

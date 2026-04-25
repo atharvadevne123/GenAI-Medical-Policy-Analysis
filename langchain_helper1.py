@@ -2,9 +2,22 @@ import boto3
 import io
 import os
 
-import retrying
 from PyPDF2 import PdfReader
 from openai import OpenAI
+from tenacity import retry, stop_after_attempt, wait_fixed
+
+MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+
+SYSTEM_PROMPT = (
+    "You are a Hospital Medical Policy Analyst. "
+    "Analyze the provided medical policy document text and produce a detailed comparative "
+    "analysis table in Markdown format. "
+    "Include these columns: Policy Number, Title, Policy Criteria, Age Criteria, "
+    "Insurance Company Name, Insurance Type, Service Type, Status, Effective Date, "
+    "Last Review, Next Review, Guideline Source, States Covered, "
+    "Needs Prior Authorization, Exclusions/Limitations, Coverage Period, Related Policies. "
+    "If a field is absent from the document, write 'Not specified'."
+)
 
 
 def split_pdf_into_batches(bucket_name, common_string, batch_size, uploaded_files=None):
@@ -51,26 +64,14 @@ def split_pdf_into_batches(bucket_name, common_string, batch_size, uploaded_file
         print(f"S3 error: {e}")
 
 
-@retrying.retry(wait_fixed=1000, stop_max_attempt_number=3)
+@retry(stop=stop_after_attempt(3), wait=wait_fixed(1))
 def medical_cond_analysis(medical_condition, text_batch, openai_api_key):
     """Analyze policy text and return a markdown comparison table."""
     client = OpenAI(api_key=openai_api_key)
-
-    system_prompt = (
-        "You are a Hospital Medical Policy Analyst. "
-        "Analyze the provided medical policy document text and produce a detailed comparative "
-        "analysis table in Markdown format. "
-        "Include these columns: Policy Number, Title, Policy Criteria, Age Criteria, "
-        "Insurance Company Name, Insurance Type, Service Type, Status, Effective Date, "
-        "Last Review, Next Review, Guideline Source, States Covered, "
-        "Needs Prior Authorization, Exclusions/Limitations, Coverage Period, Related Policies. "
-        "If a field is absent from the document, write 'Not specified'."
-    )
-
     response = client.chat.completions.create(
-        model="gpt-4o-mini",
+        model=MODEL,
         messages=[
-            {"role": "system", "content": system_prompt},
+            {"role": "system", "content": SYSTEM_PROMPT},
             {
                 "role": "user",
                 "content": (
