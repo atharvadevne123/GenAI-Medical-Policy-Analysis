@@ -1,5 +1,4 @@
 import io
-import struct
 import zlib
 import pytest
 from unittest.mock import MagicMock, patch
