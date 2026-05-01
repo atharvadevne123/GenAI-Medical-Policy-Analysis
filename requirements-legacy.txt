@@ -1,4 +1,4 @@
 # Legacy Streamlit UI (main_streamlit.py)
 # Install only if using: streamlit run main_streamlit.py
 -r requirements.txt
-streamlit>=1.32.0
+streamlit>=1.57.0
